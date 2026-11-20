@@ -41,7 +41,6 @@ function end(gameState) {
 // Valid moves are "up", "down", "left", or "right"
 // See https://docs.battlesnake.com/api/example-move for available data
 function move(gameState) {
-
   let isMoveSafe = {
     up: true,
     down: true,
@@ -49,7 +48,66 @@ function move(gameState) {
     right: true
   };
 
+
+
+
+
+
+
   // We've included code to prevent your Battlesnake from moving backwards
+   RemovingBackwordMove(gameState, isMoveSafe);
+  // TODO: Step 1 - Prevent your Battlesnake from moving out of bounds
+  // boardWidth = gameState.board.width;
+  // boardHeight = gameState.board.height;
+   boundaryChecks(gameState, isMoveSafe);
+
+  // TODO: Step 2 - Prevent your Battlesnake from colliding with itself
+    let myBody = gameState.you.body;
+    collisionCheck(gameState, myBody, isMoveSafe, true);
+  
+
+
+  // TODO: Step 3 - Prevent your Battlesnake from colliding with other Battlesnakes
+   let opponents = gameState.board.snakes; 
+   for(let opponent of opponents){
+       if(opponent.id === gameState.you.id) continue;
+       collisionCheck(gameState, opponent.body, isMoveSafe, false);
+   }
+
+  // Are there any safe moves left?
+  const safeMoves = Object.keys(isMoveSafe).filter(key => isMoveSafe[key]);
+  if (safeMoves.length == 0) {
+    console.log(`MOVE ${gameState.turn}: No safe moves detected! Moving down`);
+    return { move: "down" };
+  }
+
+  // Choose a random move from the safe moves
+  const nextMove = safeMoves[Math.floor(Math.random() * safeMoves.length)];
+
+  // TODO: Step 4 - Move towards food instead of random, to regain health and survive longer
+  // food = gameState.board.food;
+  console.log(safeMoves);
+  console.log(`MOVE ${gameState.turn}: ${nextMove}`)
+  return { move: nextMove};
+}
+
+
+function boundaryChecks(gameState, isMoveSafe){
+   const myHead = gameState.you.body[0];
+   // left
+     isMoveSafe.left = (myHead.x  -1 <  0) ?  false : isMoveSafe.left;
+   // right
+    isMoveSafe.right = (myHead.x + 1 >= gameState.board.width  )? false : isMoveSafe.right;
+   // up
+   isMoveSafe.up= (myHead.y + 1 >= gameState.board.height) ? false : isMoveSafe.up;
+   // down
+   isMoveSafe.down = (myHead.y - 1 < 0) ? false : isMoveSafe.down;
+}
+
+  // We've included code to prevent your Battlesnake from moving backwards
+function RemovingBackwordMove(gameState, isMoveSafe){
+   
+
   const myHead = gameState.you.body[0];
   const myNeck = gameState.you.body[1];
 
@@ -65,33 +123,62 @@ function move(gameState) {
   } else if (myNeck.y > myHead.y) { // Neck is above head, don't move up
     isMoveSafe.up = false;
   }
-
-  // TODO: Step 1 - Prevent your Battlesnake from moving out of bounds
-  // boardWidth = gameState.board.width;
-  // boardHeight = gameState.board.height;
-
-  // TODO: Step 2 - Prevent your Battlesnake from colliding with itself
-  // myBody = gameState.you.body;
-
-  // TODO: Step 3 - Prevent your Battlesnake from colliding with other Battlesnakes
-  // opponents = gameState.board.snakes;
-
-  // Are there any safe moves left?
-  const safeMoves = Object.keys(isMoveSafe).filter(key => isMoveSafe[key]);
-  if (safeMoves.length == 0) {
-    console.log(`MOVE ${gameState.turn}: No safe moves detected! Moving down`);
-    return { move: "down" };
-  }
-
-  // Choose a random move from the safe moves
-  const nextMove = safeMoves[Math.floor(Math.random() * safeMoves.length)];
-
-  // TODO: Step 4 - Move towards food instead of random, to regain health and survive longer
-  // food = gameState.board.food;
-
-  console.log(`MOVE ${gameState.turn}: ${nextMove}`)
-  return { move: nextMove };
 }
+
+// preventing from  snakes collisions.
+ function collisionCheck(gameState, snakeBody, isMoveSafe, isSelf){
+   let currentPosition =gameState.you.body[0];
+   let food= gameState.board.food;
+   let tailMove = 1;
+
+   // check if body is near 
+
+   if(!isSelf  && canEatFood(snakeBody ,food)){  // if opponent can eat food then it's possible to be tail position to  potentially unsafe -> so we won't move to that tail position. 
+      tailMove = 0;
+   }
+   
+
+   for(let move in isMoveSafe){
+        if(isMoveSafe[move]){
+
+          for(let i = 0 ; i < snakeBody.length-tailMove; i++){ //tail check not doing here why because when we move then it's then tail move which is why.
+               let nextX = currentPosition.x;
+               let nextY = currentPosition.y;
+              if(move == "left" ){
+                      nextX--;
+              }else if(move =="right"){
+                   nextX++;
+              }else if(move == "up"){
+                 nextY++;
+              }else{
+                 nextY--;
+              }
+
+                if(matchPosition(nextX, nextY , snakeBody[i])){
+                  isMoveSafe[move] = false;
+                  break;
+                }
+            }
+        }
+  }
+}
+
+
+ function matchPosition(x, y, thisPosition){
+    return ( thisPosition.x == x  && thisPosition.y == y)
+ };
+
+ function canEatFood(snakeBody, food){
+  for(let foodPosition of food){
+    let currntPosition = snakeBody[0];
+    if(matchPosition(currntPosition.x + 1 , currntPosition.y, foodPosition)) return true; // right
+    else if(matchPosition(currntPosition.x-1, currntPosition.y, foodPosition)) return true; // left
+    else if(matchPosition(currntPosition.x, currntPosition.y+1, foodPosition)) return true; // up
+    else if(matchPosition(currntPosition.x, currntPosition.y-1, foodPosition)) return true; // down
+  }
+  return false;
+ }
+
 
 runServer({
   info: info,
